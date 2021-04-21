@@ -22,7 +22,7 @@ If the installation was successful, you should be able to run the following comm
 
 ## Running the project
 
-    $ npm app.js
+    node app.js
 
 ## Running Port
 
