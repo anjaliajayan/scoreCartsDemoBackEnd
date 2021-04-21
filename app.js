@@ -58,6 +58,11 @@ const appUsers = {
     userName: 'AnjaliAnju',
     name: 'Anjali',
     passWord: '12345'
+  },
+  'gagan@scorecarts.com': {
+    userName: 'gagan@scorecarts.com',
+    name: 'Gagan',
+    passWord: '12345'
   }
 };
 /**
