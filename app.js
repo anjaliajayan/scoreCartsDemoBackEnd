@@ -2,52 +2,41 @@ const express = require('express');
 var session = require('express-session');
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
+const moment = require('moment');
 const app = new express();
 var cors = require('cors');
-var sessionStore = new session.MemoryStore(); 
+
 /**
  *
  * Cors handling
  */
 
-var corsOptions = {
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    allowedHeaders: [
-      "Authorization",
-      "X-PINGOTHE",
-      "Origin",
-      "X-Requested-With",
-      "Content-Type",
-      "Accept",
-      "X-Custom-header",
-      "Set-Cookie",
-      "Access-Control-Allow-Origin"
-    ],
-    exposedHeaders: ["Content-Range", "X-Content-Range", "Set-Cookie"],
-    credentials: true,
-    preflightContinue: false,
-    
-  };
+var corsOptions =
+{origin: [
+  "http://localhost:4200"
+], credentials: true};
+
 app.use(cors(corsOptions));
 /**
- * For being able to read request bodies
+ *  to read request bodies
  */
 app.use(bodyParser.json());
 
+app.use(cookieParser());
 /**
  * Initializing the express-session
  */
-//fcbeta.m3l2v7.0001.euc1.cache.amazonaws.com
+
 app.use(session({
+  name: "session-id",
   key: 'cookie_id',
   secret: "secret",
   resave: true,
   saveUninitialized: true,
   cookie: {
-    maxAge: 60000,
-    secure:false
-  },
-  store: sessionStore
+    maxAge: 10000,
+    secure: false
+  }
 }));
 
 /**
@@ -78,21 +67,26 @@ const validatePayloadMiddleware = (req, res, next) => {
   }
 };
 
-app.post('/api/login',cors(corsOptions), validatePayloadMiddleware, (req, res) => {
+app.post('/api/login', validatePayloadMiddleware, (req, res) => {
 
   const user = appUsers[req.body.userName];
   if (user && user.passWord === req.body.passWord) {
-    const userWithoutPassword = {...user};
-    delete userWithoutPassword.passWord;
+    const {
+      passWord,
+      ...userWithoutPassword
+    } = user;
     req.session.user = userWithoutPassword;
-    sessionStore.set("cookie_id",JSON.stringify(req.session.user));
+    req.session.auth = true;
+    req.session.save()
     res.status(200).json({
       user: userWithoutPassword
     });
   } else {
     return res.status(403).send({
-      res :{status:403,
-      errorMessage: 'Permission denied!'}
+      res: {
+        status: 403,
+        errorMessage: 'Permission denied!'
+      }
     });
   }
 });
@@ -102,8 +96,10 @@ app.post('/api/login',cors(corsOptions), validatePayloadMiddleware, (req, res) =
  */
 app.get('/api/login', (req, res) => {
 
-  let isUserExist = req.session.user ? true :false
-  res.status(200).send({loggedIn: isUserExist});
+  let isUserExist = req.session.user ? true : false
+  res.status(200).send({
+    loggedIn: isUserExist
+  });
 });
 
 /**
@@ -115,25 +111,30 @@ app.post('/api/logout', (req, res) => {
     if (err) {
       res.status(500).send('Could not log out.');
     } else {
-      res.status(200).send({message:"logout successfull"});
+      res.status(200).send({
+        message: "logout successfull"
+      });
     }
   });
 });
 
 /**
- *  checking if user is stored in session.
+ *  handling session out
  */
-const authMiddleware = (req, res, next) => {
-  if(req.session && req.session.user) {
-    next();
-  } else {
-    res.status(403).send({
-      errorMessage: 'You must be logged in.'
-    });
-  }
-};
 
-
+const sessionOutMiddleware = (req, res, next) => {
+let now=moment();
+let sessionExpTime=moment().add(req.session.cookie.maxAge /1000 ,"seconds");
+if(now.isAfter(sessionExpTime) || now.isSame(sessionExpTime)){
+ 
+  res.clearCookie('session-id');
+  return res.status(440).json({
+    status:false,
+    message:"please login again"
+  })
+}
+}
+app.use(sessionOutMiddleware);
 /**
  * Listen on port 3000
  */
