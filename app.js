@@ -5,6 +5,7 @@ var cookieParser = require('cookie-parser');
 const moment = require('moment');
 const app = new express();
 var cors = require('cors');
+var db = require('./db_connection');
 
 /**
  *
@@ -141,3 +142,4 @@ app.use(sessionOutMiddleware);
 app.listen(3000, () => {
   console.log('Server listening on port 3000')
 });
+
